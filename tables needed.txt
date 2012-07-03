@@ -1,0 +1,15 @@
+server: amdc-sql07
+
+Tables needed for Calculate_XS_Projections
+------------------------------------------
+FCT_ES_PROJECTION
+DIM_PARITY_ALPHA_MAPPING(insert only)
+FCT_SALES
+DIM_SEASONALITY SEAS
+DIM_PRODUCT_GROUP
+
+Tables needed for CALC_ES_PROJECTION_ALPHA
+------------------------------------------
+FCT_ES_PROJECTION(insert only)
+Denorm_UPC_Nonzero_sls
+DENORM_UPC_TABLE
