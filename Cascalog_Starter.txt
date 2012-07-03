@@ -1,0 +1,63 @@
+Cascalog Installation Guide
+---------------------------
+1) Install Leiningen (sudo apt-get install leiningen on Debian like systems or use your package manager or else see https://github.com/technomancy/leiningen/blob/master/README.md )
+2) Make sure you have javac installed and set up
+3) clone cascalog project from github (git clone https://github.com/nathanmarz/cascalog.git)
+4) go to cascalog folder and run lein deps, compile, repl
+
+
+Introductory Materials
+----------------------
+1)Beginners' Material:  http://nathanmarz.com/blog/introducing-cascalog-a-clojure-based-query-language-for-hado.html
+2)Sort, Count, Outer Join, etc: http://nathanmarz.com/blog/new-cascalog-features-outer-joins-combiners-sorting-and-more.html
+3)Practical Example: http://nathanmarz.com/blog/news-feed-in-38-lines-of-code-using-cascalog.html
+
+
+Queries that I have written for Kaggle Million Song Dataset Challenge
+---------------------------------------------------------------------
+(use 'cascalog.api)(use 'cascalog.ops)
+
+(defn to-long [a] (Long/parseLong a))
+
+(defn lhdata-parser [dir]
+  (let [source (lfs-textline dir)]
+    (<- [?user ?song ?heard] (source ?line) (re-parse [#"[^\s]+"] ?line :> ?user ?song ?r)
+	(to-long ?r :> ?heard)
+                     (:distinct false))))
+
+(def lh_data (lhdata-parser "../MSD-programs/newTestFiles/final_triplet.txt"))
+
+(defn userdata-parser [dir]
+  (let [source (lfs-textline dir)]
+    (<- [?user] (source ?line) (re-parse [#"[^\s]+"] ?line :> ?user)
+                     (:distinct false))))
+
+(def user_data (userdata-parser "../MSD-subdata/users/part-00000"))
+
+(defn userdata-parser [dir]
+  (let [source (lfs-textline dir)]
+    (<- [?user ?user_id] (source ?line) (re-parse [#"[^\s]+"] ?line :> ?user ?UID)(to-long ?UID :> ?user_id)(:distinct true))))
+
+(def user_data (userdata-parser "../MSD-programs/newTestFiles/kaggle_users_new.txt")) 
+
+(def reco_10_dup_id (<- [?uid ?sid ?r ?count](lh_data ?u ?s ?r)(song_data ?s ?sid)(user_data ?u ?uid)(:sort ?uid)(count ?count)))
+(?<- (lfs-textline "../MSD-subdata/reco_file") [?p ?f-out] (reco_query ?p ?p2 ?r ) (limit [553] ?p2 :> ?f-out)(:sort ?r)(:reverse true))
+
+(?<- (lfs-textline "../MSD-subdata/song_popularity")[?song ?count](lh_data _ ?song _)(count ?count))
+
+(?<- (lfs-textline "../MSD-subdata/user_listening_count")[?user ?count](lh_data ?user _ _)(count ?count))
+
+(?<-(stdout)[?count](lh_data _ ?song _)(count ?count))
+
+
+(?<- (lfs-textline "../MSD-subdata/colisten_matrix")[?s ?s1 ?count](lh_data ?u ?s _)(lh_data ?u ?s1 _)(count ?count))
+
+
+(?<- (stdout)[?u ?s_l](ldata ?u ?s1 _)(ldata ?u1 ?s1 _)(not= ?u ?u1)(test_data ?s1 ?s ?r)(not= ?s1 ?s)(< 1 ?r)(limit [4] ?s :> ?s_l)(:sort ?r)(:reverse true))
+
+(?<- (stdout)[?u ?s ?s1](ldata ?u ?s _)(test_data ?s ?s1 _)(not= ?s ?s1))
+
+(?<- (stdout) [?p ?f-out] (data2 ?p ?p2 ?r ) (limit [2] ?p2 :> ?f-out)(:sort ?r)(:reverse true))
+
+
+Note: I cannot uplpoad the files these queries have been used on as they are very big(300 mb +)
